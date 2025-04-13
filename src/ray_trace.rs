@@ -418,6 +418,13 @@ impl Intersection {
 
         Some(min)
     }
+
+    pub fn prepare_computations(&self, r: Ray) -> Computations{
+
+        let point = r.position(self.t);
+        Computations::new(self.t, self.object.clone(), point, -r.direction, self.object.normal_at(point))
+
+    }
 }
 
 /// Representation of a fixed Light source with a fixed Color
@@ -499,6 +506,95 @@ impl Default for Material {
         Self::new()
     }
 }
+
+// #[derive(Clone)]
+pub struct World {
+    light: Light,
+    spheres: Vec<Sphere>,
+}
+
+impl World {
+    // pub fn new() -> World{
+
+    // }
+
+    // pub fn default_world(light: Light, spheres: Vec<Sphere>) -> World{
+    //     World { light, spheres }
+    // }
+
+    pub fn intersect_world(&self, r: Ray) -> Vec<Intersection> {
+        let mut v = Vec::<Intersection>::new();
+        for sphere in &self.spheres {
+            for intersection in sphere.intersect(r) {
+                v.push(intersection)
+            }
+        }
+        // Sorting by ascending order is useful for reflection and refraction
+        v.sort_by(|a, b| a.t.partial_cmp(&b.t).unwrap());
+        v
+    }
+
+    pub fn shade_hit(&self, comps: Computations) -> Color{
+        Light::lighting(&comps.object.material, &self.light, &comps.point, &comps.eyev, &comps.normalv)
+    }
+}
+
+impl Default for World {
+    fn default() -> Self {
+        let mut spheres = Vec::from([Sphere::new(), Sphere::new()]);
+        spheres[0].set_material(Material {
+            color: Color::new(0.8, 1.0, 0.6),
+            ambient: 0.1,
+            diffuse: 0.7,
+            specular: 0.7,
+            shininess: 200.0,
+        });
+        spheres[1].set_transform(Matrix::scaling(0.5, 0.5, 0.5));
+        World {
+            light: Light {
+                position: Tuple::point(-10.0, -10.0, -10.0),
+                intensity: Color::new(1.0, 1.0, 1.0),
+            },
+            spheres: spheres,
+        }
+    }
+}
+
+
+pub struct Computations {
+    pub t: f64,
+    pub object: Sphere,
+    pub point: Tuple,
+    pub eyev: Tuple,
+    pub normalv: Tuple,
+    pub inside: bool
+}
+
+impl Computations{
+    pub fn new(t: f64, object: Sphere, point: Tuple, eyev: Tuple, normalv: Tuple) -> Computations{
+        if point.id != 1.0 {
+            panic!("point should be a point, not a vector.")
+        }
+        else if eyev.id != 0.0 {
+            panic!("eyev should be a vector, not a point.")
+        }
+        else if normalv.id != 0.0 {
+            panic!("eyev should be a vector, not a point.")
+        }
+        let mut comps = Computations{
+            t, object, point, eyev, normalv, inside: false
+        };
+        if comps.normalv.dot(eyev) < 0.0{
+            comps.inside = true;
+            comps.normalv = -comps.normalv;
+        }
+
+        comps
+
+
+    }
+}
+
 #[derive(Clone)]
 /// Matrix Operations (specialized for 4x4 Matrices)
 pub struct Matrix {

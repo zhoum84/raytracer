@@ -16,32 +16,31 @@ use std::fs::File;
 use std::io::Write;
 fn main() {
     let args: Vec<String> = env::args().collect();
-    
+
     if args.len() == 1 {
         let res = example_3d();
-        if res.is_err(){
+        if res.is_err() {
             println!("ERROR: Something went wrong. File not created.");
         } else {
             println!("Successfully created sphere.ppm.")
         }
     } else if args[1] == "circle" {
         let res = example_circle();
-        if res.is_err(){
+        if res.is_err() {
             println!("ERROR: Something went wrong. File not created.");
         } else {
             println!("Successfully created circle.ppm.")
         }
-
     } else if args[1] == "projectile" {
         let res = example_projectile();
-        if res.is_err(){
+        if res.is_err() {
             println!("ERROR: Something went wrong. File not created.");
         } else {
             println!("Successfully created proj.ppm.")
         }
     } else {
         let res = example_3d();
-        if res.is_err(){
+        if res.is_err() {
             println!("ERROR: Something went wrong. File not created.");
         } else {
             println!("Successfully created 'sphere.ppm'.")

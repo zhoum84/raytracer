@@ -1,8 +1,8 @@
 use ray_tracer::ray_trace::{
-    Canvas, Color, Intersection, Light, Material, Matrix, Ray, Sphere, Tuple,
+    Canvas, Color, Intersection, Light, Material, Matrix, Ray, Sphere, Tuple, World
 };
 #[cfg(test)]
-mod tests {
+mod fundamental {
     use core::f64;
 
     use super::*;
@@ -532,5 +532,47 @@ mod tests {
         assert_eq!(sheared.x, 2.0);
         assert_eq!(sheared.y, 3.0);
         assert_eq!(sheared.z, 7.0);
+    }
+
+
+}
+
+#[cfg(test)]
+mod world{
+    use core::f64;
+
+    use super::*;
+    use approx::assert_relative_eq;
+
+    #[test]
+    fn world_intersect() {
+        let w = World::default();
+        let intersections = w.intersect_world(Ray::new(
+            Tuple::point(0.0, 0.0, -5.0),
+            Tuple::vector(0.0, 0.0, 1.0),
+        ));
+
+        assert_eq!(intersections.len(), 4);
+        assert_eq!(intersections[0].t, 4.0);
+        assert_eq!(intersections[1].t, 4.5);
+        assert_eq!(intersections[2].t, 5.5);
+        assert_eq!(intersections[3].t, 6.0);
+    }
+
+    #[test]
+    fn prep_computations(){
+        let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
+        let s = Sphere::new();
+        let i = Intersection::new(4.0, s.clone());
+        let comps = i.prepare_computations(r); 
+        assert_eq!(comps.inside, false);
+
+        let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 0.0, 1.0));
+        let i = Intersection::new(1.0, s);
+        let comps = i.prepare_computations(r);
+        assert_eq!(comps.inside, true);
+        assert_eq!(comps.normalv.x, 0.0);
+        assert_eq!(comps.normalv.y, 0.0);
+        assert_eq!(comps.normalv.z, -1.0);
     }
 }
