@@ -1,17 +1,18 @@
 use core::f64;
 use ray_tracer::ray_trace::{
+    Camera,
     Canvas,
     Color,
     Environment,
     Intersection,
     Light,
+    Material,
+    Matrix,
     Projectile,
     Ray,
     Sphere,
     Tuple,
-    World,
-    Camera
-    //Matrix
+    World, //Matrix
 };
 use std::env;
 use std::fs::File;
@@ -20,11 +21,11 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() == 1 {
-        let res = example_3d();
+        let res = example_world();
         if res.is_err() {
             println!("ERROR: Something went wrong. File not created.");
         } else {
-            println!("Successfully created sphere.ppm.")
+            println!("Successfully created world.ppm.")
         }
     } else if args[1] == "circle" {
         let res = example_circle();
@@ -40,18 +41,96 @@ fn main() {
         } else {
             println!("Successfully created proj.ppm.")
         }
-    } else {
-        let res = example_3d();
+    } else if args[1] == "sphere" {
+        let res = example_sphere();
         if res.is_err() {
             println!("ERROR: Something went wrong. File not created.");
         } else {
             println!("Successfully created 'sphere.ppm'.")
         }
+    } else {
+        let res = example_world();
+        if res.is_err() {
+            println!("ERROR: Something went wrong. File not created.");
+        } else {
+            println!("Successfully created 'world.ppm'.")
+        }
+
     }
 }
 
+fn example_world() -> std::io::Result<()>{
+    let mut material = Material::new();
+    material.color = Color::new(1.0, 0.9, 0.9);
+    material.specular = 0.0;
+
+    // The floor is just a very flattened sphere
+    let mut floor = Sphere::new();
+    floor.set_transform(Matrix::scaling(10.0, 0.01, 10.0));
+
+    floor.set_material(&material);
+
+    // Same for the left wall
+    let mut left_wall = Sphere::new();
+    left_wall.set_transform(
+        Matrix::translation(0.0, 0.0, 5.0)
+            * Matrix::rotation_y(-f64::consts::FRAC_PI_4)
+            * Matrix::rotation_x(f64::consts::FRAC_PI_2)
+            * Matrix::scaling(10.0, 0.01, 10.0),
+    );
+    left_wall.set_material(&material);
+
+    // And the right wall
+    let mut right_wall = Sphere::new();
+    right_wall.set_transform(
+        Matrix::translation(0.0, 0.0, 5.0)
+            * Matrix::rotation_y(f64::consts::FRAC_PI_4)
+            * Matrix::rotation_x(f64::consts::FRAC_PI_2)
+            * Matrix::scaling(10.0, 0.01, 10.0),
+    );
+    right_wall.set_material(&material);
+
+    let mut middle = Sphere::new();
+    middle.set_transform(Matrix::translation(-0.5, 1.0, 0.5));
+    middle.material = Material::new();
+    middle.material.color = Color::new(0.1, 1.0, 0.5);
+    middle.material.diffuse = 0.7;
+    middle.material.specular = 0.3;
+
+
+    let mut right = Sphere::new();
+    right.set_transform( Matrix::translation(1.5, 0.5,-0.5) *Matrix::scaling(0.5, 0.5, 0.5));
+    right.material = Material::new();
+    right.material.color = Color::new(0.5, 1.0, 0.1);
+    right.material.diffuse = 0.7;
+    right.material.specular = 0.3;
+
+    let mut left = Sphere::new();
+    left.set_transform( Matrix::translation(-1.5, 0.33,-0.75) *Matrix::scaling(0.33, 0.33, 0.33));
+    left.material = Material::new();
+    left.material.color = Color::new(1.0, 0.8, 0.1);
+    left.material.diffuse = 0.7;
+    left.material.specular = 0.3;
+
+
+
+    let light = Light::new(Tuple::point(-10.0, 10.0, -10.0), Color::new(1.0, 1.0, 1.0));
+
+    let world = World::new(light, vec![floor, left_wall, right_wall, middle, right, left]);
+
+    // You can change the camera parameters to increase the size of the final .ppm file and get enhanced detail, 
+    // but it will take far longer.
+    // 100, 50 -> 1000, 50 looks quite nice, but takes some time.
+    let mut c = Camera::new(100, 50, f64::consts::FRAC_PI_3); 
+    c.transform = Matrix::view_transform(&Tuple::point(0.0, 1.5, -5.0), &Tuple::point(0.0, 1.0, 0.0), &Tuple::vector(0.0, 1.0, 0.0));
+
+    let canvas = c.render(&world);
+
+    to_ppm(canvas, "world")
+}
+
 /// Simulate a 3d sphere
-fn example_3d() -> std::io::Result<()> {
+fn example_sphere() -> std::io::Result<()> {
     // Set scene parameters
     // Consider changing the values to get different results.
     let ray_origin = Tuple::point(0.0, 0.0, -5.0);

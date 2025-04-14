@@ -1,5 +1,5 @@
 use ray_tracer::ray_trace::{
-    Canvas, Color, Intersection, Light, Material, Matrix, Ray, Sphere, Tuple, World, Camera
+    Camera, Canvas, Color, Intersection, Light, Material, Matrix, Ray, Sphere, Tuple, World,
 };
 #[cfg(test)]
 mod fundamental {
@@ -533,12 +533,10 @@ mod fundamental {
         assert_eq!(sheared.y, 3.0);
         assert_eq!(sheared.z, 7.0);
     }
-
-
 }
 
 #[cfg(test)]
-mod world{
+mod world {
     use core::f64;
 
     use super::*;
@@ -561,11 +559,11 @@ mod world{
     }
 
     #[test]
-    fn prep_computations(){
+    fn prep_computations() {
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
         let s = Sphere::new();
         let i = Intersection::new(4.0, s.clone());
-        let comps = i.prepare_computations(&r); 
+        let comps = i.prepare_computations(&r);
         assert_eq!(comps.inside, false);
 
         let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 0.0, 1.0));
@@ -578,7 +576,7 @@ mod world{
     }
 
     #[test]
-    fn shades(){
+    fn shades() {
         let w = World::default();
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
         let s = w.spheres[0].clone();
@@ -588,7 +586,7 @@ mod world{
         assert_relative_eq!(color.r, 0.38066, max_relative = REL_TOL);
         assert_relative_eq!(color.g, 0.47583, max_relative = REL_TOL);
         assert_relative_eq!(color.b, 0.28550, max_relative = REL_TOL);
-        
+
         let mut w = World::default();
         w.light = Light::new(Tuple::point(0.0, 0.25, 0.0), Color::new(1.0, 1.0, 1.0));
         let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 0.0, 1.0));
@@ -602,7 +600,7 @@ mod world{
     }
 
     #[test]
-    fn color_at(){
+    fn color_at() {
         let mut w = World::default();
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 1.0, 0.0));
         let c = w.color_at(&r);
@@ -630,41 +628,41 @@ mod world{
     }
 
     #[test]
-    fn view_transform(){
+    fn view_transform() {
         let from = Tuple::point(0.0, 0.0, 0.0);
         let to = Tuple::point(0.0, 0.0, -1.0);
         let up = Tuple::vector(0.0, 1.0, 0.0);
         let t = Matrix::view_transform(&from, &to, &up);
 
         let identity = Matrix::identity(4);
-        for i in 0..3{
-            for j in 0..3{
-            assert_eq!(t.data[i][j], identity.data[i][j]);
-        }
+        for i in 0..3 {
+            for j in 0..3 {
+                assert_eq!(t.data[i][j], identity.data[i][j]);
+            }
         }
 
         let from = Tuple::point(0.0, 0.0, 0.0);
         let to = Tuple::point(0.0, 0.0, 1.0);
         let up = Tuple::vector(0.0, 1.0, 0.0);
         let t = Matrix::view_transform(&from, &to, &up);
-        
+
         let scaling = Matrix::scaling(-1.0, 1.0, -1.0);
-        for i in 0..3{
-            for j in 0..3{
-            assert_eq!(t.data[i][j], scaling.data[i][j]);
-        }
+        for i in 0..3 {
+            for j in 0..3 {
+                assert_eq!(t.data[i][j], scaling.data[i][j]);
+            }
         }
 
         let from = Tuple::point(0.0, 0.0, 8.0);
         let to = Tuple::point(0.0, 0.0, 0.0);
         let up = Tuple::vector(0.0, 1.0, 0.0);
         let t = Matrix::view_transform(&from, &to, &up);
-        
+
         let translation = Matrix::translation(0.0, 0.0, -8.0);
-        for i in 0..3{
-            for j in 0..3{
-            assert_eq!(t.data[i][j], translation.data[i][j]);
-        }
+        for i in 0..3 {
+            for j in 0..3 {
+                assert_eq!(t.data[i][j], translation.data[i][j]);
+            }
         }
 
         let from = Tuple::point(1.0, 3.0, 2.0);
@@ -673,21 +671,21 @@ mod world{
         let t = Matrix::view_transform(&from, &to, &up);
 
         let arbitrary = vec![
-            vec![-0.50709, 0.50709, 0.67612,-2.36643],
-            vec![0.76772, 0.60609, 0.12122,-2.82843],
-            vec![-0.35857, 0.59761,-0.71714, 0.00000],
-            vec![0.00000, 0.00000, 0.00000, 1.00000]
+            vec![-0.50709, 0.50709, 0.67612, -2.36643],
+            vec![0.76772, 0.60609, 0.12122, -2.82843],
+            vec![-0.35857, 0.59761, -0.71714, 0.00000],
+            vec![0.00000, 0.00000, 0.00000, 1.00000],
         ];
 
-        for i in 0..3{
-            for j in 0..3{
-            assert_relative_eq!(t.data[i][j], arbitrary[i][j], max_relative = REL_TOL);
-        }
+        for i in 0..3 {
+            for j in 0..3 {
+                assert_relative_eq!(t.data[i][j], arbitrary[i][j], max_relative = REL_TOL);
+            }
         }
     }
 
     #[test]
-    fn camera(){
+    fn camera() {
         let c = Camera::new(200, 125, f64::consts::FRAC_PI_2);
         assert_relative_eq!(c.pixel_size, 0.01, max_relative = REL_TOL);
         let c = Camera::new(125, 200, f64::consts::FRAC_PI_2);
@@ -695,7 +693,7 @@ mod world{
     }
 
     #[test]
-    fn ray_for_pixel(){
+    fn ray_for_pixel() {
         let c = Camera::new(201, 101, f64::consts::FRAC_PI_2);
         let r = c.ray_for_pixel(100, 50);
         assert_eq!(r.origin.x, 0.0);
@@ -707,19 +705,19 @@ mod world{
     }
 
     #[test]
-    fn render(){
-        let w = World::default(); 
+    fn render() {
+        let w = World::default();
         let mut c = Camera::new(11, 11, f64::consts::FRAC_PI_2);
         let from = Tuple::point(0.0, 0.0, -5.0);
         let to = Tuple::point(0.0, 0.0, 0.0);
         let up = Tuple::vector(0.0, 1.0, 0.0);
-        
+
         c.transform = Matrix::view_transform(&from, &to, &up);
         let image = c.render(&w);
 
         let pixel = image.pixel_at(5, 5);
-        assert_relative_eq!(pixel.r, 0.38066, max_relative=REL_TOL);
-        assert_relative_eq!(pixel.g, 0.47583, max_relative=REL_TOL);
-        assert_relative_eq!(pixel.b, 0.28550, max_relative=REL_TOL);
+        assert_relative_eq!(pixel.r, 0.38066, max_relative = REL_TOL);
+        assert_relative_eq!(pixel.g, 0.47583, max_relative = REL_TOL);
+        assert_relative_eq!(pixel.b, 0.28550, max_relative = REL_TOL);
     }
 }
