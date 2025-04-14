@@ -9,6 +9,8 @@ use ray_tracer::ray_trace::{
     Ray,
     Sphere,
     Tuple,
+    World,
+    Camera
     //Matrix
 };
 use std::env;

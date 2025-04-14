@@ -1,5 +1,5 @@
 use ray_tracer::ray_trace::{
-    Canvas, Color, Intersection, Light, Material, Matrix, Ray, Sphere, Tuple, World
+    Canvas, Color, Intersection, Light, Material, Matrix, Ray, Sphere, Tuple, World, Camera
 };
 #[cfg(test)]
 mod fundamental {
@@ -684,6 +684,42 @@ mod world{
             assert_relative_eq!(t.data[i][j], arbitrary[i][j], max_relative = REL_TOL);
         }
         }
+    }
 
+    #[test]
+    fn camera(){
+        let c = Camera::new(200, 125, f64::consts::FRAC_PI_2);
+        assert_relative_eq!(c.pixel_size, 0.01, max_relative = REL_TOL);
+        let c = Camera::new(125, 200, f64::consts::FRAC_PI_2);
+        assert_relative_eq!(c.pixel_size, 0.01, max_relative = REL_TOL);
+    }
+
+    #[test]
+    fn ray_for_pixel(){
+        let c = Camera::new(201, 101, f64::consts::FRAC_PI_2);
+        let r = c.ray_for_pixel(100, 50);
+        assert_eq!(r.origin.x, 0.0);
+        assert_eq!(r.origin.y, 0.0);
+        assert_eq!(r.origin.z, 0.0);
+
+        assert_eq!(r.direction.y, 0.0);
+        assert_eq!(r.direction.z, -1.0);
+    }
+
+    #[test]
+    fn render(){
+        let w = World::default(); 
+        let mut c = Camera::new(11, 11, f64::consts::FRAC_PI_2);
+        let from = Tuple::point(0.0, 0.0, -5.0);
+        let to = Tuple::point(0.0, 0.0, 0.0);
+        let up = Tuple::vector(0.0, 1.0, 0.0);
+        
+        c.transform = Matrix::view_transform(&from, &to, &up);
+        let image = c.render(&w);
+
+        let pixel = image.pixel_at(5, 5);
+        assert_relative_eq!(pixel.r, 0.38066, max_relative=REL_TOL);
+        assert_relative_eq!(pixel.g, 0.47583, max_relative=REL_TOL);
+        assert_relative_eq!(pixel.b, 0.28550, max_relative=REL_TOL);
     }
 }

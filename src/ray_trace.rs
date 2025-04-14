@@ -608,6 +608,64 @@ impl Computations{
 
     }
 }
+pub struct Camera{
+    hsize: usize,
+    vsize: usize,
+    field_of_view: f64,
+    pub transform: Matrix,
+    half_width: f64,
+    half_height: f64,
+    pub pixel_size: f64
+}
+
+impl Camera{
+    pub fn new(hsize: usize, vsize: usize, field_of_view: f64) -> Camera{
+        let half_view = f64::tan(field_of_view/2.0);
+        let aspect = hsize as f64/vsize as f64;
+        let half_width:f64;
+        let half_height: f64;
+        if aspect >= 1.0 {
+            half_width = half_view;
+            half_height = half_view / aspect;
+        } else{
+            half_width = half_view * aspect;
+            half_height = half_view;
+        }
+        let pixel_size = (half_width * 2.0) / hsize as f64;
+        Camera { hsize, vsize, field_of_view, transform: Matrix::identity(4), half_width, half_height, pixel_size}
+    }
+
+    pub fn ray_for_pixel(&self, px: usize, py: usize) -> Ray{
+        let xoffset = (px as f64+ 0.5) * self.pixel_size;
+        let yoffset = (py as f64 + 0.5) * self.pixel_size;
+        let world_x = self.half_width - xoffset;
+        let world_y = self.half_height - yoffset;
+
+        let (Some(m)) = self.transform.invert() else{
+            panic!("Camera Transform Matrix does not have inverse");
+        };
+        let pixel = &m * &Tuple::point(world_x, world_y,-1.0);
+        let origin = &m * &Tuple::point(0.0, 0.0, 0.0);
+
+        let direction = (pixel - origin).normalize();
+        Ray::new(origin, direction)
+    }
+
+    pub fn render(&self, world: &World) -> Canvas{
+        let mut image = Canvas::new(self.hsize, self.vsize);
+
+        for y in 0..self.vsize - 1 {
+            for x in 0..self.hsize - 1{
+                let ray = self.ray_for_pixel(x, y);
+                let color = world.color_at(&ray);
+                image.write_pixel(x, y, color);
+            }
+        }
+
+        image
+    }
+}
+
 
 #[derive(Clone)]
 /// Matrix Operations (specialized for 4x4 Matrices)
