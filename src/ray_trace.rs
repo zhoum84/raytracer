@@ -419,7 +419,7 @@ impl Intersection {
         Some(min)
     }
 
-    pub fn prepare_computations(&self, r: Ray) -> Computations{
+    pub fn prepare_computations(&self, r: &Ray) -> Computations{
 
         let point = r.position(self.t);
         Computations::new(self.t, self.object.clone(), point, -r.direction, self.object.normal_at(point))
@@ -483,7 +483,7 @@ impl Light {
 /// A representation of the four attributes of the Phong reflection model, and a Color
 pub struct Material {
     pub color: Color,
-    ambient: f64,
+    pub ambient: f64,
     diffuse: f64,
     specular: f64,
     shininess: f64,
@@ -509,8 +509,8 @@ impl Default for Material {
 
 // #[derive(Clone)]
 pub struct World {
-    light: Light,
-    spheres: Vec<Sphere>,
+    pub light: Light,
+    pub spheres: Vec<Sphere>,
 }
 
 impl World {
@@ -522,10 +522,10 @@ impl World {
     //     World { light, spheres }
     // }
 
-    pub fn intersect_world(&self, r: Ray) -> Vec<Intersection> {
+    pub fn intersect_world(&self, r: &Ray) -> Vec<Intersection> {
         let mut v = Vec::<Intersection>::new();
         for sphere in &self.spheres {
-            for intersection in sphere.intersect(r) {
+            for intersection in sphere.intersect(*r) {
                 v.push(intersection)
             }
         }
@@ -534,12 +534,26 @@ impl World {
         v
     }
 
-    pub fn shade_hit(&self, comps: Computations) -> Color{
+    pub fn shade_hit(&self, comps: &Computations) -> Color{
         Light::lighting(&comps.object.material, &self.light, &comps.point, &comps.eyev, &comps.normalv)
+    }
+
+    pub fn color_at(&self, ray: &Ray) -> Color{
+        // Find the intersections
+        let v = self.intersect_world(ray);
+        
+        if v.is_empty() {
+            return Color::new(0.0, 0.0, 0.0)
+        }
+
+        // Use the outermost intersection
+        let comps = v[0].prepare_computations(ray);
+        self.shade_hit(&comps)
     }
 }
 
 impl Default for World {
+    // Default world has 2 spheres set at the origin
     fn default() -> Self {
         let mut spheres = Vec::from([Sphere::new(), Sphere::new()]);
         spheres[0].set_material(Material {
@@ -787,6 +801,23 @@ impl Matrix {
         id4.data[2][1] = z_y;
 
         id4
+    }
+
+    pub fn view_transform(from: &Tuple, to: &Tuple, up: &Tuple) -> Matrix{
+        let forward = (*to - *from).normalize();
+        let left = forward.cross(up.normalize());
+        let true_up = left.cross(forward);
+
+        let orientation = vec![
+            vec![left.x, left.y, left.z, 0.0],
+            vec![true_up.x, true_up.y, true_up.z, 0.0],
+            vec![-forward.x, -forward.y, -forward.z, 0.0],
+            vec![0.0, 0.0, 0.0, 1.0]
+        ];
+
+        let view = Matrix::new(4, 4, orientation);
+        &view * &Matrix::translation(-from.x, -from.y, -from.z)
+
     }
 }
 

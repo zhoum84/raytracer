@@ -543,11 +543,12 @@ mod world{
 
     use super::*;
     use approx::assert_relative_eq;
+    const REL_TOL: f64 = 1e-4;
 
     #[test]
     fn world_intersect() {
         let w = World::default();
-        let intersections = w.intersect_world(Ray::new(
+        let intersections = w.intersect_world(&Ray::new(
             Tuple::point(0.0, 0.0, -5.0),
             Tuple::vector(0.0, 0.0, 1.0),
         ));
@@ -564,15 +565,125 @@ mod world{
         let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
         let s = Sphere::new();
         let i = Intersection::new(4.0, s.clone());
-        let comps = i.prepare_computations(r); 
+        let comps = i.prepare_computations(&r); 
         assert_eq!(comps.inside, false);
 
         let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 0.0, 1.0));
         let i = Intersection::new(1.0, s);
-        let comps = i.prepare_computations(r);
+        let comps = i.prepare_computations(&r);
         assert_eq!(comps.inside, true);
         assert_eq!(comps.normalv.x, 0.0);
         assert_eq!(comps.normalv.y, 0.0);
         assert_eq!(comps.normalv.z, -1.0);
+    }
+
+    #[test]
+    fn shades(){
+        let w = World::default();
+        let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
+        let s = w.spheres[0].clone();
+        let i = Intersection::new(4.0, s);
+        let comps = i.prepare_computations(&r);
+        let color = w.shade_hit(&comps);
+        assert_relative_eq!(color.r, 0.38066, max_relative = REL_TOL);
+        assert_relative_eq!(color.g, 0.47583, max_relative = REL_TOL);
+        assert_relative_eq!(color.b, 0.28550, max_relative = REL_TOL);
+        
+        let mut w = World::default();
+        w.light = Light::new(Tuple::point(0.0, 0.25, 0.0), Color::new(1.0, 1.0, 1.0));
+        let r = Ray::new(Tuple::point(0.0, 0.0, 0.0), Tuple::vector(0.0, 0.0, 1.0));
+        let s = w.spheres[1].clone();
+        let i = Intersection::new(0.5, s);
+        let comps = i.prepare_computations(&r);
+        let color = w.shade_hit(&comps);
+        assert_relative_eq!(color.r, 0.90498, max_relative = REL_TOL);
+        assert_relative_eq!(color.g, 0.90498, max_relative = REL_TOL);
+        assert_relative_eq!(color.b, 0.90498, max_relative = REL_TOL);
+    }
+
+    #[test]
+    fn color_at(){
+        let mut w = World::default();
+        let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 1.0, 0.0));
+        let c = w.color_at(&r);
+        // Test no intersections
+        assert_eq!(c.r, 0.0);
+        assert_eq!(c.g, 0.0);
+        assert_eq!(c.b, 0.0);
+
+        // Intersect outermost sphere
+        let r = Ray::new(Tuple::point(0.0, 0.0, -5.0), Tuple::vector(0.0, 0.0, 1.0));
+        let c = w.color_at(&r);
+        assert_relative_eq!(c.r, 0.38066, max_relative = REL_TOL);
+        assert_relative_eq!(c.g, 0.47583, max_relative = REL_TOL);
+        assert_relative_eq!(c.b, 0.28550, max_relative = REL_TOL);
+
+        // Intersect innermost sphere
+        w.spheres[0].material.ambient = 1.0;
+        w.spheres[1].material.ambient = 1.0;
+        let inner = w.spheres[0].material.color;
+        let r = Ray::new(Tuple::point(0.0, 0.0, 0.75), Tuple::vector(0.0, 0.0, -1.0));
+        let c = w.color_at(&r);
+        assert_relative_eq!(c.r, inner.r, max_relative = REL_TOL);
+        assert_relative_eq!(c.g, inner.g, max_relative = REL_TOL);
+        assert_relative_eq!(c.b, inner.b, max_relative = REL_TOL);
+    }
+
+    #[test]
+    fn view_transform(){
+        let from = Tuple::point(0.0, 0.0, 0.0);
+        let to = Tuple::point(0.0, 0.0, -1.0);
+        let up = Tuple::vector(0.0, 1.0, 0.0);
+        let t = Matrix::view_transform(&from, &to, &up);
+
+        let identity = Matrix::identity(4);
+        for i in 0..3{
+            for j in 0..3{
+            assert_eq!(t.data[i][j], identity.data[i][j]);
+        }
+        }
+
+        let from = Tuple::point(0.0, 0.0, 0.0);
+        let to = Tuple::point(0.0, 0.0, 1.0);
+        let up = Tuple::vector(0.0, 1.0, 0.0);
+        let t = Matrix::view_transform(&from, &to, &up);
+        
+        let scaling = Matrix::scaling(-1.0, 1.0, -1.0);
+        for i in 0..3{
+            for j in 0..3{
+            assert_eq!(t.data[i][j], scaling.data[i][j]);
+        }
+        }
+
+        let from = Tuple::point(0.0, 0.0, 8.0);
+        let to = Tuple::point(0.0, 0.0, 0.0);
+        let up = Tuple::vector(0.0, 1.0, 0.0);
+        let t = Matrix::view_transform(&from, &to, &up);
+        
+        let translation = Matrix::translation(0.0, 0.0, -8.0);
+        for i in 0..3{
+            for j in 0..3{
+            assert_eq!(t.data[i][j], translation.data[i][j]);
+        }
+        }
+
+        let from = Tuple::point(1.0, 3.0, 2.0);
+        let to = Tuple::point(4.0, -2.0, 8.0);
+        let up = Tuple::vector(1.0, 1.0, 0.0);
+        let t = Matrix::view_transform(&from, &to, &up);
+
+        let arbitrary = vec![
+            vec![-0.50709, 0.50709, 0.67612,-2.36643],
+            vec![0.76772, 0.60609, 0.12122,-2.82843],
+            vec![-0.35857, 0.59761,-0.71714, 0.00000],
+            vec![0.00000, 0.00000, 0.00000, 1.00000]
+        ];
+
+        for i in 0..3{
+            for j in 0..3{
+            assert_relative_eq!(t.data[i][j], arbitrary[i][j], max_relative = REL_TOL);
+        }
+        }
+
     }
 }
